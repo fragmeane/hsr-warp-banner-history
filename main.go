@@ -71,7 +71,7 @@ func monitor() {
 
 	for _, idx := range indices {
 		count := 1
-		gtype := CHARACTERGACHA
+		gtype := COLLABLCGACHA
 
 		if idx > STELLARBOUNDARY && idx < CHARACTERBOUNDARY {
 			gtype = CHARACTERGACHA
@@ -105,7 +105,7 @@ func monitor() {
 				IsExclusive: true,
 			}
 
-			if banner.GachaType == strconv.Itoa(LCGACHA) {
+			if banner.GachaType == strconv.Itoa(LCGACHA) || banner.GachaType == strconv.Itoa(COLLABLCGACHA) {
 				banner.Desc = lcResponse[strconv.Itoa(banner.RateUp)].Name
 			}
 			
