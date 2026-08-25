@@ -214,7 +214,6 @@ func monitor() {
 	}
 }
 
-
 // Writes content to index.json and index.min.json
 func writeToIndex(content *[]byte, miniContent *[]byte) error {
 	cwd, err := os.Getwd()
