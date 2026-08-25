@@ -19,7 +19,7 @@ func monitor() {
 	index, err := readIndex()
 
 	if err != nil {
-		log.Fatalln("Unable to read index.json. ERROR: " + err.Error())
+		log.Fatalln("Unable to read " + INDEXFILE + ". ERROR: " + err.Error())
 		return
 	}
 	
@@ -50,7 +50,7 @@ func monitor() {
 	b, err := io.ReadAll(lcResp.Body)
 
 	if err != nil {
-		log.Fatalln("Unable to read light_cones.json content")
+		log.Fatalln("Unable to read StarRailRes light_cones.json content")
 		return
 	}
 
@@ -62,6 +62,8 @@ func monitor() {
 	collabLcIndex, _ := strconv.Atoi(getLatestBanner(&index, COLLABLCGACHA).Id)
 
 	indices := []int{charIndex, lcIndex, collabCharIndex, collabLcIndex}
+
+	changed := false
 
 	for _, idx := range indices {
 		count := 1
@@ -82,7 +84,6 @@ func monitor() {
 			latest, exists := response.Config.Banners[idx + count]
 
 			if !exists {
-				count = 1
 				break in
 			}
 
@@ -102,24 +103,33 @@ func monitor() {
 				banner.Desc = lcResponse[strconv.Itoa(banner.RateUp)].Name
 			}
 			
-			addBanner(&index, banner)
+			err = addBanner(&index, banner)
+
+			if err == nil {
+				changed = true
+			}
+			
 			count++
 		}
 	}
 
-	content, err := json.MarshalIndent(index, "", "    ")
-	miniContent, err := json.Marshal(index)
+	if changed {
+		content, err := json.MarshalIndent(index, "", "    ")
+		miniContent, err := json.Marshal(index)
+	
+		if err != nil {
+			log.Fatalln("Unable to marshal content")
+			return
+		}
+	
+		err = writeToIndex(content, miniContent)
+	
+		if err != nil {
+			log.Fatalln("Unable to write to " + INDEXFILE)
+			return
+		}
 
-	if err != nil {
-		log.Fatalln("Unable to marshal content")
-		return
-	}
-
-	err = writeToIndex(content, miniContent)
-
-	if err != nil {
-		log.Fatalln("Unable to write to index.json")
-		return
+		log.Println("Successfully updated " + INDEXFILE)
 	}
 }
 
