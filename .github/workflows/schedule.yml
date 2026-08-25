@@ -26,6 +26,9 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.26.5' #
 
       # Runs the whole program
       - name: Run script
