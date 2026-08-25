@@ -13,6 +13,10 @@ import (
 	"sync"
 )
 
+func main() {
+	monitor()
+}
+
 // Scheduled task to run twice a day every day to monitor starrailstation API and StarRailRes updates.
 // Performs necessary updates to the index when updates are found.
 func monitor() {
@@ -419,8 +423,4 @@ func addBanner(index *BannerHistory, banner Banner) error {
 	index.Banners = slices.Insert(index.Banners, latestIndex + 1, banner)
 	
 	return nil
-}
-
-func main() {
-	monitor()
 }
