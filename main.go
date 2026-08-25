@@ -77,7 +77,9 @@ func monitor() {
 			gtype = CHARACTERGACHA
 		} else if idx < LCBOUNDARY {
 			gtype = LCGACHA
-		} else if idx > COLLABCHARBOUNDARY && idx < COLLABCHARBOUNDARY {
+		} else if idx < DEPARTUREBOUNDARY {
+			gtype = DEPARTUREGACHA
+		} else if idx < COLLABCHARBOUNDARY {
 			gtype = COLLABCHARACTERGACHA
 		}
 
