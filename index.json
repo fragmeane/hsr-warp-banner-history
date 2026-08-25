@@ -2297,6 +2297,19 @@
             "is_exclusive": true
         },
         {
+            "desc": "I Am As You Behold",
+            "gacha_type": "22",
+            "id": "6004",
+            "version": "4.4",
+            "rateup4": [],
+            "companion_banner": 6003,
+            "end_time": 1796126340,
+            "rateup": 23062,
+            "rerun": 0,
+            "start_time": 1784807940,
+            "is_exclusive": true
+        },
+        {
             "desc": "In the Night",
             "gacha_type": "12",
             "id": "3003",
@@ -4616,6 +4629,19 @@
             "rateup": 23046,
             "rerun": 0,
             "start_time": 1752191940,
+            "is_exclusive": true
+        },
+        {
+            "desc": "Flickering Stars",
+            "gacha_type": "22",
+            "id": "6003",
+            "version": "4.4",
+            "rateup4": [],
+            "companion_banner": 6004,
+            "end_time": 1796126340,
+            "rateup": 23061,
+            "rerun": 0,
+            "start_time": 1784807940,
             "is_exclusive": true
         }
     ]
