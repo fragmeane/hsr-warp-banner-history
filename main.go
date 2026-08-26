@@ -10,6 +10,7 @@ import (
 	"os"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -17,6 +18,7 @@ const INDEXFILE = "index.json"
 const INDEXMINFILE = "index.min.json"
 const BANNERURL = "https://starrailstation.com/api/v1/warp_config"
 const LCURL = "https://raw.githubusercontent.com/Mar-7th/StarRailRes/refs/heads/master/index_new/en/light_cones.json"
+const CHARURL = "https://raw.githubusercontent.com/Mar-7th/StarRailRes/refs/heads/master/index_new/en/characters.json"
 
 const CHARACTERGACHA = 11
 const LCGACHA = 12
@@ -78,14 +80,17 @@ type Banner struct {
 }
 
 type LightCone struct {
-	Desc     string
-	Icon     string
 	Id       string
 	Name     string
-	Path     string
-	Portrait string
-	Preview  string
 	Rarity   int
+	Others map[string]any `json:"-"`
+}
+
+type Character struct {
+	Id       string
+	Name     string
+	Rarity   int
+	Others map[string]any `json:"-"`
 }
 
 func main() {
@@ -119,9 +124,19 @@ func monitor() {
 	}
 
 	defer lcResp.Body.Close()
+
+	charResp, err := http.Get(CHARURL)
+
+	if err != nil {
+		log.Fatalln("Unable to request characters.json from StarRailRes repository")
+		return
+	}
+
+	defer charResp.Body.Close()
 	
 	var response *Response
-	var lcResponse map[string]*LightCone
+	var lcResponse map[string]LightCone
+	var charResponse map[string]Character
 	
 	decoder := json.NewDecoder(resp.Body)
 	decoder.Decode(&response)
@@ -135,6 +150,15 @@ func monitor() {
 
 	json.Unmarshal(b, &lcResponse)
 
+	b, err = io.ReadAll(charResp.Body)
+
+	if err != nil {
+		log.Fatalln("Unable to read StarRailRes characters.json content")
+		return
+	}
+
+	json.Unmarshal(b, &charResponse)
+	
 	charIndex, _ := strconv.Atoi(getLatestBanner(index, CHARACTERGACHA).Id)
 	lcIndex, _ := strconv.Atoi(getLatestBanner(index, LCGACHA).Id)
 	collabCharIndex, _ := strconv.Atoi(getLatestBanner(index, COLLABCHARACTERGACHA).Id)
@@ -179,12 +203,8 @@ func monitor() {
 				EndTime: latest.EndTime,
 				IsExclusive: true,
 			}
-			
-			if banner.GachaType == strconv.Itoa(LCGACHA) || banner.GachaType == strconv.Itoa(COLLABLCGACHA) {
-				banner.Desc = lcResponse[strconv.Itoa(banner.RateUp)].Name
-			}
-			
-			err = addBanner(index, banner)
+
+			err = addBanner(index, lcResponse, charResponse, banner)
 
 			if err == nil {
 				changed = true
@@ -312,9 +332,27 @@ func getLatestBanner(index *BannerHistory, gachaType int) *Banner {
 	}
 }
 
+// Gets the banner by Id
+func getBannerById(index *BannerHistory, id string) *Banner {
+	idx := slices.IndexFunc(index.Banners, func(b Banner) bool {
+		return b.Id == id
+	})
+
+	return &index.Banners[idx]
+}
+
+// Gets the banner by RateUp
+func getBannerByRateUp(index *BannerHistory, rateUp int) *Banner {
+	idx := slices.IndexFunc(index.Banners, func(b Banner) bool {
+		return b.RateUp == rateUp
+	})
+
+	return &index.Banners[idx]
+}
+
 // Adds banner as the latest banner of the banner GachaType
 // Should be used when new banners come out and after index.json is initialized with setup()
-func addBanner(index *BannerHistory, banner *Banner) error {
+func addBanner(index *BannerHistory, lcResponse map[string]LightCone, charResponse map[string]Character,  banner *Banner) error {
 	gachaType, _ := strconv.Atoi(banner.GachaType)
 	id, _ := strconv.Atoi(banner.Id)
 
@@ -329,49 +367,49 @@ func addBanner(index *BannerHistory, banner *Banner) error {
 
 	if latestId % 1000 == 0 || ((latestId - 2) % 1000 == 0 && (gachaType == CHARACTERGACHA || gachaType == LCGACHA)) {
 		id := 0
+		lastId, _ := strconv.Atoi(index.Banners[len(index.Banners)-1].Id)
+
+		if lastId <= id {
+			latestIndex = len(index.Banners)-1
+		}
+		
 		switch gachaType {
 		case CHARACTERGACHA:
 			id = CHARACTERBOUNDARY-1000
+			latestIndex = slices.IndexFunc(index.Banners, func(b Banner) bool {
+				gt, _ := strconv.Atoi(b.GachaType)
+				return gt == DEPARTUREGACHA
+			})
 		case LCGACHA:
 			id = LCBOUNDARY-1000
+			latestIndex = slices.IndexFunc(index.Banners, func(b Banner) bool {
+				return b.Id == getLatestBanner(index, CHARACTERGACHA).Id
+			})
 		case COLLABCHARACTERGACHA:
 			id = COLLABCHARBOUNDARY-1000
 		case COLLABLCGACHA:
 			id = COLLABCHARBOUNDARY
 		}
-
-		lastId, _ := strconv.Atoi(index.Banners[len(index.Banners)-1].Id)
-		
-		if lastId <= id {
-			latestIndex = len(index.Banners)-1
-		} else if gachaType == CHARACTERGACHA {
-			latestIndex = slices.IndexFunc(index.Banners, func(b Banner) bool {
-				gt, _ := strconv.Atoi(b.GachaType)
-				return gt == DEPARTUREGACHA
-			})
-		} else if gachaType == LCGACHA {
-			latestIndex = slices.IndexFunc(index.Banners, func(b Banner) bool {
-				return b.Id == getLatestBanner(index, CHARACTERGACHA).Id
-			})
-			println("YES")
-		}
 	} else {
-		
 		latestIndex = slices.IndexFunc(index.Banners, func(b Banner) bool {
 			return b.Id == latestBanner.Id
 		})
 	}
 
-	if banner.Rerun > 0 {
-		append := "Indelible Coterie: "
+	switch gachaType {
+		case CHARACTERGACHA:
+			if banner.Rerun > 0 {
+				banner.Desc = strings.Join([]string{"Indelible Coterie", charResponse[strconv.Itoa(banner.RateUp)].Name}, ": ")
+			}
+		case LCGACHA:
+		case COLLABLCGACHA:
+			banner.Desc = lcResponse[banner.Id].Name
 
-		if gachaType == LCGACHA {
-				append = "Coalesced Truths: "
-		}
-		
-		banner.Desc = append + banner.Desc
+			if banner.Rerun > 0 {
+				banner.Desc = strings.Join([]string{"Coalesced Truths", banner.Desc}, ": ")
+			}
 	}
-
+	
 	banner.Version = strconv.FormatFloat(VERSION, 'f', 1,32)
 	
 	index.Banners = slices.Insert(index.Banners, latestIndex + 1, *banner)
